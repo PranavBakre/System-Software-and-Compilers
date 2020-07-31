@@ -143,7 +143,7 @@ public class Assignment1 {
 
     public static void Pass1(LinesOfCode loc) {
         for (var tokenizer: loc.Tokenizers) {
-            while (){
+            while (tokenizer.hasMoreTokens()){
                 
             switch (GetType(tokenizer.nextToken())) {
                 case "Label":
