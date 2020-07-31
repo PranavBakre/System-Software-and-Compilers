@@ -1,0 +1,9 @@
+        START   100
+        MOVER   AREG,   A
+        ADD     AREG,   B
+        MOVEM   AREG,   C
+        STOP
+A       DC '5'
+B       DC '8'
+C       DC '1'
+        END
