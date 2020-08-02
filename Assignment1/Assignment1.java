@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-
 public class Assignment1 {
     public static class Opcode {
         public String Opcode;
@@ -33,7 +32,6 @@ public class Assignment1 {
     }
 
     public static class Symbol {
-        // public String ID;
         public String Name;
         public int Address;
         public int Length;
@@ -58,20 +56,40 @@ public class Assignment1 {
         public List<ArrayList<String>> Words;
     }
 
+    public static class Condition {
+        public Opcode OPCODE;
+        public String Name;
+        public int Id;
+
+        public Condition(Opcode opcode, String name, int id) {
+            OPCODE = opcode;
+            Name = name;
+            Id = id;
+        }
+    }
+
+    public static class IntermediateCode {
+
+    }
+
     static int LocationCounter;
     static List<Opcode> MachineOperationTable, PseudoOperationTable;
     static List<Symbol> SymbolTable;
     static List<Literal> LiteralTable;
     static List<Register> RegisterTable;
     static List<Integer> PoolTable;
+    static List<Condition> Conditions;
+    static List<Integer> Constants;
 
     public static void Initialize() {
-        RegisterTable = new ArrayList<Register>();
-        MachineOperationTable = new ArrayList<Opcode>();
-        PseudoOperationTable = new ArrayList<Opcode>();
-        LiteralTable = new ArrayList<Literal>();
-        PoolTable = new ArrayList<Integer>();
-        SymbolTable= new ArrayList<Symbol>();
+        RegisterTable = new ArrayList<>();
+        MachineOperationTable = new ArrayList<>();
+        PseudoOperationTable = new ArrayList<>();
+        LiteralTable = new ArrayList<>();
+        PoolTable = new ArrayList<>();
+        SymbolTable = new ArrayList<>();
+        Conditions = new ArrayList<>();
+        Constants=new ArrayList<>();
         PoolTable.add(0);
     }
 
@@ -101,10 +119,16 @@ public class Assignment1 {
         PseudoOperationTable.add(new Opcode("ORIGIN", "AD", "03"));
         PseudoOperationTable.add(new Opcode("EQU", "AD", "04"));
         PseudoOperationTable.add(new Opcode("LTORG", "AD", "05"));
-    }
+        var opcode = MachineOperationTable.stream()
+            .filter(x -> x.Opcode.equals("BC"))
+            .findFirst().get();
 
-    public static class Condition{
-        
+        Conditions.add(new Condition(opcode, "LT", 1));
+        Conditions.add(new Condition(opcode, "LE", 2));
+        Conditions.add(new Condition(opcode, "EQ", 3));
+        Conditions.add(new Condition(opcode, "GT", 4));
+        Conditions.add(new Condition(opcode, "GE", 5));
+        Conditions.add(new Condition(opcode, "ANY", 6));
     }
 
     public static LinesOfCode ReadAssembly(BufferedReader reader) throws IOException {
@@ -128,7 +152,6 @@ public class Assignment1 {
     }
 
     public static String GetType(String value) {
-
         var mOpcode = MachineOperationTable.stream().filter(x -> x.Opcode.equals(value)).findFirst();
         if (mOpcode.isPresent()) {
             return mOpcode.get().StatementClass;
@@ -146,7 +169,7 @@ public class Assignment1 {
         }
 
         if (value.matches("^\\d*$")) {
-            return "Address";
+            return "Constant";
         }
 
         return "Label";
@@ -158,56 +181,70 @@ public class Assignment1 {
                 var word = wordsInLine.get(i);
                 switch (GetType(word)) {
                     case "Label":
-                        System.out.print(word+"\t"+LocationCounter);
+                        System.out.print(word + "\t" + LocationCounter);
                         var symbol = SymbolTable.stream().filter(x -> x.Name.equals(word)).findFirst();
                         if (!symbol.isPresent()) {
                             var newSymbol = new Symbol(word, 1);
                             SymbolTable.add(newSymbol);
                         }
                         if (i == 0) {
-                            SymbolTable.stream().filter(x -> x.Name.equals(word)).findFirst().get().Address = LocationCounter;
-                            System.out.print("Assigned address to "+SymbolTable.get(SymbolTable.size() - 1).Name+"\t");
+                            SymbolTable.stream().filter(x -> x.Name.equals(word)).findFirst()
+                                    .get().Address = LocationCounter;
+                           
                         }
-
                         break;
+                    case "Constant":
+                        Constants.add(Integer.parseInt(word));
+                    break;
                     case "Literal":
                         System.out.print("Literal");
                         LiteralTable.add(new Literal(word));
                         break;
                     case "LTORG":
-                    System.out.print("LTORG\t"+LocationCounter+"\t");    
-                    for (var literal : LiteralTable) {
+                        System.out.print("LTORG\t" + LocationCounter + "\t");
+                        for (var literal : LiteralTable) {
                             literal.Address = LocationCounter;
                             LocationCounter++;
                         }
-                        
+                        PoolTable.add(LiteralTable.size());
                         break;
                     case "START":
                     case "ORIGIN":
-                        
                         i++;
                         LocationCounter = Integer.parseInt(wordsInLine.get(i));
-                        System.out.print("ORIGIN\t"+LocationCounter+"\t");
+                        System.out.print("ORIGIN\t" + LocationCounter + "\t");
                         break;
                     case "EQU":
-                        System.out.print("EQU\t"+LocationCounter+"\t");
+                        System.out.print("EQU\t" + LocationCounter + "\t");
+                        int y = i + 1;
+                        int z = i - 1;
+                        var label = SymbolTable.stream().filter(x -> x.Name.equals(wordsInLine.get(y))).findFirst()
+                                .get();
+                        SymbolTable.stream().filter(x -> x.Name.equals(wordsInLine.get(z))).findFirst()
+                                .get().Address = label.Address;
                         LocationCounter++;
                         break;
                     case "DL":
-                        System.out.print("DL\t"+LocationCounter+"\t");
+                        System.out.print("DL\t" + LocationCounter + "\t");
                         LocationCounter++;
                         break;
 
                     case "IS":
-                        System.out.print("IS\t"+LocationCounter+"\t");
+                        System.out.print("IS\t" + LocationCounter + "\t");
+                        var instruction = MachineOperationTable.stream().filter(x -> x.Opcode.equals(word)).findFirst()
+                                .get();
+                        var condition = Conditions.stream().filter(x -> x.OPCODE.equals(instruction)).findFirst();
+                        if (condition.isPresent()) {
+                            i++;
+                        }
                         LocationCounter++;
                         break;
 
                     case "Register":
-                    System.out.print("Register\t"+LocationCounter+"\t");
-                    break;
+                        System.out.print("Register\t" + LocationCounter + "\t");
+                        break;
                     default:
-                    System.out.print(word+"\t");
+                        System.out.print(word + "\t");
                 }
 
             }
@@ -231,8 +268,8 @@ public class Assignment1 {
             }
             System.out.println();
         }
-        for(var sbl: SymbolTable){
-            System.out.println(sbl.Name+"\t"+sbl.Address);
+        for (var sbl : LiteralTable) {
+            System.out.println(sbl.Literal + "\t" + sbl.Address);
         }
     }
 }

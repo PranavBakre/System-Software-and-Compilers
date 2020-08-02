@@ -12,6 +12,7 @@ MOVER       DREG, '8'
 LTORG
 PRINT          D
 STOP
+X    EQU      D
 D    DS       3
 B    DC       5
 R    DS       9
