@@ -22,32 +22,36 @@ public class Assignment1 {
     }
 
     public static class Register {
-        public int RId;
-        public String RName;
+        public int Id;
+        public String Name;
 
-        public Register(int Id, String Name) {
-            RId = Id;
-            RName = Name;
+        public Register(int id, String name) {
+            Id = id;
+            Name = name;
         }
     }
 
     public static class Symbol {
+        public int Id;
         public String Name;
         public int Address;
         public int Length;
 
         public Symbol(String name, int length) {
+            Id=SymbolTable.size();
             Name = name;
             Length = length;
         }
     }
 
     public static class Literal {
+        public int Id;
         public String Literal;
         public int Address;
 
         public Literal(String literal) {
             Literal = literal;
+            Id=LiteralTable.size();
         }
     }
 
@@ -160,7 +164,7 @@ public class Assignment1 {
         if (pOpcode.isPresent()) {
             return pOpcode.get().Opcode;
         }
-        var register = RegisterTable.stream().filter(x -> x.RName.equals(value)).findFirst();
+        var register = RegisterTable.stream().filter(x -> x.Name.equals(value)).findFirst();
         if (register.isPresent()) {
             return "Register";
         }
@@ -179,31 +183,34 @@ public class Assignment1 {
         for (var wordsInLine : loc.Words) {
             for (int i = 0; i < wordsInLine.size(); i++) {
                 var word = wordsInLine.get(i);
+                Opcode opcode;
+                Register register;
                 switch (GetType(word)) {
                     case "Label":
-                        System.out.print(word + "\t" + LocationCounter);
                         var symbol = SymbolTable.stream().filter(x -> x.Name.equals(word)).findFirst();
                         if (!symbol.isPresent()) {
                             var newSymbol = new Symbol(word, 1);
                             SymbolTable.add(newSymbol);
                         }
+                        symbol=SymbolTable.stream().filter(x -> x.Name.equals(word)).findFirst();
                         if (i == 0) {
-                            SymbolTable.stream().filter(x -> x.Name.equals(word)).findFirst()
-                                    .get().Address = LocationCounter;
-                           
+                            symbol.get().Address = LocationCounter;
                         }
+                        System.out.print("S\t"+symbol.get().Id+"\t");
                         break;
                     case "Constant":
                         Constants.add(Integer.parseInt(word));
                     break;
                     case "Literal":
-                        System.out.print("Literal");
+                        System.out.print("L\t"+LiteralTable.size());
                         LiteralTable.add(new Literal(word));
                         break;
                     case "LTORG":
-                        System.out.print("LTORG\t" + LocationCounter + "\t");
+                        opcode= PseudoOperationTable.stream().filter(x->x.Opcode.equals(word)).findFirst().get();
+                        System.out.print(opcode.StatementClass+"\t" + opcode.MneumonicInformation + "\t");
                         for (var literal : LiteralTable) {
                             literal.Address = LocationCounter;
+                            System.out.print(literal.Literal+"\n\t\t");
                             LocationCounter++;
                         }
                         PoolTable.add(LiteralTable.size());
@@ -212,7 +219,8 @@ public class Assignment1 {
                     case "ORIGIN":
                         i++;
                         LocationCounter = Integer.parseInt(wordsInLine.get(i));
-                        System.out.print("ORIGIN\t" + LocationCounter + "\t");
+                        opcode=PseudoOperationTable.stream().filter(x->x.Opcode.equals(word)).findFirst().get();
+                        System.out.print(opcode.StatementClass+"\t"+opcode.MneumonicInformation+"\t"+"C\t"+LocationCounter);
                         break;
                     case "EQU":
                         System.out.print("EQU\t" + LocationCounter + "\t");
@@ -225,23 +233,29 @@ public class Assignment1 {
                         LocationCounter++;
                         break;
                     case "DL":
-                        System.out.print("DL\t" + LocationCounter + "\t");
+                        opcode=MachineOperationTable.stream().filter(x->x.Opcode.equals(word)).findFirst().get();
+                        System.out.print(opcode.StatementClass+"\t"+ opcode.MneumonicInformation);
                         LocationCounter++;
                         break;
 
                     case "IS":
-                        System.out.print("IS\t" + LocationCounter + "\t");
-                        var instruction = MachineOperationTable.stream().filter(x -> x.Opcode.equals(word)).findFirst()
+                        
+                        opcode = MachineOperationTable.stream().filter(x -> x.Opcode.equals(word)).findFirst()
                                 .get();
-                        var condition = Conditions.stream().filter(x -> x.OPCODE.equals(instruction)).findFirst();
+                        var condition = Conditions.stream().filter(x -> x.OPCODE.equals(opcode)).findFirst();
+                        System.out.print(opcode.StatementClass+"\t" + opcode.MneumonicInformation + "\t");
+                        
                         if (condition.isPresent()) {
                             i++;
+                            System.out.print(wordsInLine.get(i)+"\t" );    
                         }
                         LocationCounter++;
+                        
                         break;
 
                     case "Register":
-                        System.out.print("Register\t" + LocationCounter + "\t");
+                        register=RegisterTable.stream().filter(x->x.Name.equals(word)).findFirst().get();
+                        System.out.print("R\t" + register.Id + "\t");
                         break;
                     default:
                         System.out.print(word + "\t");
