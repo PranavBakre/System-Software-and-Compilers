@@ -5,11 +5,12 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-import java.util.StringTokenizer;
+
 
 public class Assignment1 {
-    static public class Opcode {
+    public static class Opcode {
         public String Opcode;
         public String StatementClass;
         public String MneumonicInformation;
@@ -21,7 +22,7 @@ public class Assignment1 {
         }
     }
 
-    static public class Register {
+    public static class Register {
         public int RId;
         public String RName;
 
@@ -31,30 +32,37 @@ public class Assignment1 {
         }
     }
 
-    static public class Symbol {
-        public String ID;
+    public static class Symbol {
+        // public String ID;
         public String Name;
-        public String Address;
+        public int Address;
         public int Length;
+
+        public Symbol(String name, int length) {
+            Name = name;
+            Length = length;
+        }
     }
 
-    static public class Literal {
+    public static class Literal {
         public String Literal;
-        public String Address;
+        public int Address;
+
+        public Literal(String literal) {
+            Literal = literal;
+        }
     }
 
-    static public class LinesOfCode {
+    public static class LinesOfCode {
         public List<String> Lines;
-        public List<StringTokenizer> Tokenizers;
+        public List<ArrayList<String>> Words;
     }
 
     static int LocationCounter;
     static List<Opcode> MachineOperationTable, PseudoOperationTable;
-    static List<Symbol> SymbotTable;
+    static List<Symbol> SymbolTable;
     static List<Literal> LiteralTable;
     static List<Register> RegisterTable;
-    // static int LiteralTablePtr;
-    // static int SymbolTablePtr;
     static List<Integer> PoolTable;
 
     public static void Initialize() {
@@ -63,6 +71,7 @@ public class Assignment1 {
         PseudoOperationTable = new ArrayList<Opcode>();
         LiteralTable = new ArrayList<Literal>();
         PoolTable = new ArrayList<Integer>();
+        SymbolTable= new ArrayList<Symbol>();
         PoolTable.add(0);
     }
 
@@ -94,75 +103,115 @@ public class Assignment1 {
         PseudoOperationTable.add(new Opcode("LTORG", "AD", "05"));
     }
 
+    public static class Condition{
+        
+    }
+
     public static LinesOfCode ReadAssembly(BufferedReader reader) throws IOException {
         var list = new ArrayList<String>();
-        var tokenizers = new ArrayList<StringTokenizer>();
+        var allWords = new ArrayList<ArrayList<String>>();
         var line = reader.readLine();
         while (line != null) {
-            var tokenizer = new StringTokenizer(line, " ,");
-            tokenizers.add(tokenizer);
+            var words = line.split(" |,");
+            var wordslist = new ArrayList<>(Arrays.asList(words));
+            wordslist.removeAll(Arrays.asList("", null));
+            allWords.add(wordslist);
             list.add(line);
             line = reader.readLine();
         }
         var result = new LinesOfCode();
         result.Lines = list;
-        result.Tokenizers = tokenizers;
+        result.Words = allWords;
         reader.close();
         return result;
 
     }
 
-    public static Boolean isNumber(String value) {
-        try {
-            Integer.parseInt(value);
-            return true;
-        } catch (NumberFormatException e) {
-            return false;
-        }
-    }
-
     public static String GetType(String value) {
 
-        var mOpcode = MachineOperationTable.stream().filter(x -> x.Opcode == value).findFirst();
+        var mOpcode = MachineOperationTable.stream().filter(x -> x.Opcode.equals(value)).findFirst();
         if (mOpcode.isPresent()) {
             return mOpcode.get().StatementClass;
         }
-        var pOpcode = PseudoOperationTable.stream().filter(x -> x.Opcode == value).findFirst();
+        var pOpcode = PseudoOperationTable.stream().filter(x -> x.Opcode.equals(value)).findFirst();
         if (pOpcode.isPresent()) {
             return pOpcode.get().Opcode;
         }
-        var register = RegisterTable.stream().filter(x -> x.RName == value).findFirst();
+        var register = RegisterTable.stream().filter(x -> x.RName.equals(value)).findFirst();
         if (register.isPresent()) {
             return "Register";
         }
-        if ((value.contains("'") || value.contains("\"")) && isNumber(value.replaceAll("^['\"](.*)['\"]$", ""))) {
+        if (value.matches("^['\"](\\d*)['\"]$")) {
             return "Literal";
         }
+
+        if (value.matches("^\\d*$")) {
+            return "Address";
+        }
+
         return "Label";
     }
 
     public static void Pass1(LinesOfCode loc) {
-        for (var tokenizer: loc.Tokenizers) {
-            while (tokenizer.hasMoreTokens()){
-                
-            switch (GetType(tokenizer.nextToken())) {
-                case "Label":
-                break;
-                case "LTORG":
-                break;
-                case "START":
-                case "ORIGIN":
+        for (var wordsInLine : loc.Words) {
+            for (int i = 0; i < wordsInLine.size(); i++) {
+                var word = wordsInLine.get(i);
+                switch (GetType(word)) {
+                    case "Label":
+                        System.out.print(word+"\t"+LocationCounter);
+                        var symbol = SymbolTable.stream().filter(x -> x.Name.equals(word)).findFirst();
+                        if (!symbol.isPresent()) {
+                            var newSymbol = new Symbol(word, 1);
+                            SymbolTable.add(newSymbol);
+                        }
+                        if (i == 0) {
+                            SymbolTable.stream().filter(x -> x.Name.equals(word)).findFirst().get().Address = LocationCounter;
+                            System.out.print("Assigned address to "+SymbolTable.get(SymbolTable.size() - 1).Name+"\t");
+                        }
 
-                break;
-                case "EQU":
-                break;
-                case "DL":
-                break;
-                case "IS":
-                break;
+                        break;
+                    case "Literal":
+                        System.out.print("Literal");
+                        LiteralTable.add(new Literal(word));
+                        break;
+                    case "LTORG":
+                    System.out.print("LTORG\t"+LocationCounter+"\t");    
+                    for (var literal : LiteralTable) {
+                            literal.Address = LocationCounter;
+                            LocationCounter++;
+                        }
+                        
+                        break;
+                    case "START":
+                    case "ORIGIN":
+                        
+                        i++;
+                        LocationCounter = Integer.parseInt(wordsInLine.get(i));
+                        System.out.print("ORIGIN\t"+LocationCounter+"\t");
+                        break;
+                    case "EQU":
+                        System.out.print("EQU\t"+LocationCounter+"\t");
+                        LocationCounter++;
+                        break;
+                    case "DL":
+                        System.out.print("DL\t"+LocationCounter+"\t");
+                        LocationCounter++;
+                        break;
+
+                    case "IS":
+                        System.out.print("IS\t"+LocationCounter+"\t");
+                        LocationCounter++;
+                        break;
+
+                    case "Register":
+                    System.out.print("Register\t"+LocationCounter+"\t");
+                    break;
+                    default:
+                    System.out.print(word+"\t");
+                }
+
             }
-            
-        }
+            System.out.println();
         }
     }
 
@@ -170,18 +219,20 @@ public class Assignment1 {
         Initialize();
         InitializeRegisterTable();
         InitializeOT();
-        var Reader = new BufferedReader(new FileReader("AssemblyCode.txt"));
+        var Reader = new BufferedReader(new FileReader("AssemblyCode2.txt"));
         var loc = ReadAssembly(Reader);
-        var tokenizers = loc.Tokenizers;
+        var lines = loc.Words;
 
-        // Pass1(loc);
+        Pass1(loc);
 
-        for (var tokenizer : tokenizers) {
-            while (tokenizer.hasMoreTokens()) {
-                System.out.print(tokenizer.nextToken());
+        for (var words : lines) {
+            for (var word : words) {
+                System.out.print(word + "\t");
             }
             System.out.println();
         }
-
+        for(var sbl: SymbolTable){
+            System.out.println(sbl.Name+"\t"+sbl.Address);
+        }
     }
 }
