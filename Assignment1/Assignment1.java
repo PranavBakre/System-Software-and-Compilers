@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 public class Assignment1 {
@@ -72,10 +71,6 @@ public class Assignment1 {
             Name = name;
             Id = id;
         }
-    }
-
-    public static class IntermediateCode {
-
     }
 
     static int LocationCounter;
@@ -175,23 +170,8 @@ public class Assignment1 {
         if (value.matches("^[+-]*\\d*$")) {
             return "Constant";
         }
-        if (value.matches("^.+[\\*+-\\/].+$")) {
-            return "Complex";
-        }
-        return "Label";
-    }
 
-    public static void LabelHandling(int index, String word) {
-        var symbol = SymbolTable.stream().filter(x -> x.Name.equals(word)).findFirst();
-        if (!symbol.isPresent()) {
-            var newSymbol = new Symbol(word, 1);
-            SymbolTable.add(newSymbol);
-        }
-        symbol = SymbolTable.stream().filter(x -> x.Name.equals(word)).findFirst();
-        if (index == 0) {
-            symbol.get().Address = LocationCounter;
-        }
-        System.out.print("S\t" + symbol.get().Id + "\t");
+        return "Label";
     }
 
     public static void Pass1(LinesOfCode loc) {
@@ -202,7 +182,16 @@ public class Assignment1 {
                 Register register;
                 switch (GetType(word)) {
                     case "Label":
-                        LabelHandling(i, word);
+                        var symbol = SymbolTable.stream().filter(x -> x.Name.equals(word)).findFirst();
+                        if (!symbol.isPresent()) {
+                            var newSymbol = new Symbol(word, 1);
+                            SymbolTable.add(newSymbol);
+                        }
+                        symbol = SymbolTable.stream().filter(x -> x.Name.equals(word)).findFirst();
+                        if (i == 0) {
+                            symbol.get().Address = LocationCounter;
+                        }
+                        System.out.print("S\t" + symbol.get().Id + "\t");
                         break;
                     case "Constant":
                         System.out.print("C\t" + word + "\t");
@@ -309,16 +298,29 @@ public class Assignment1 {
         var loc = ReadAssembly(Reader);
         var lines = loc.Words;
 
-        Pass1(loc);
-
+        System.out.println("Code");
         for (var words : lines) {
             for (var word : words) {
                 System.out.print(word + "\t");
             }
             System.out.println();
         }
+        System.out.println("Intermediate Code");
+        Pass1(loc);
+
+        System.out.println("Symbol Table");
         for (var sbl : SymbolTable) {
             System.out.println(sbl.Name + "\t" + sbl.Address);
+        }
+
+        System.out.println("Literal Table");
+        for (var sbl : LiteralTable) {
+            System.out.println(sbl.Literal + "\t" + sbl.Address);
+        }
+
+        System.out.println("Pool Table");
+        for (var poolPtr : PoolTable) {
+            System.out.println(poolPtr);
         }
     }
 }
