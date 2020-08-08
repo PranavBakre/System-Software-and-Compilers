@@ -30,6 +30,16 @@ public class Assignment1 {
         }
     }
 
+    public static class Numeric {
+        public int Id;
+        public int Value;
+        public Address Address;
+        public char GetType(){
+            return this.getClass().getSimpleName().charAt(0);
+        }
+
+    }
+
     public static class Register {
         public int Id;
         public String Name;
@@ -40,10 +50,8 @@ public class Assignment1 {
         }
     }
 
-    public static class Symbol {
-        public int Id;
+    public static class Symbol extends Numeric {
         public String Name;
-        public Address Address;
         public int Length;
 
         public Symbol(String name, int length) {
@@ -54,10 +62,17 @@ public class Assignment1 {
         }
     }
 
-    public static class Literal {
-        public int Id;
+    public static class Constant extends Numeric {
+
+        public Constant(int value) {
+            Id = Constants.size();
+            Value = value;
+            
+        }
+    }
+
+    public static class Literal extends Numeric {
         public String Literal;
-        public Address Address;
 
         public Literal(String literal) {
             Literal = literal;
@@ -83,6 +98,18 @@ public class Assignment1 {
         }
     }
 
+    public static class IntermediateCodeStatement {
+        public Address Address;
+        public Opcode Opcode;
+        public int Operand1;
+        public Numeric Operand2;
+
+        public IntermediateCodeStatement() {
+            Address=new Address();       
+        }
+
+    }
+
     static int LocationCounter;
     static List<Opcode> MachineOperationTable, PseudoOperationTable;
     static List<Symbol> SymbolTable;
@@ -91,8 +118,8 @@ public class Assignment1 {
     static List<Integer> PoolTable;
     static int NextPoolIndex;
     static List<Condition> Conditions;
-    static List<Integer> Constants;
-    static List<String> IntermediateCode;
+    static List<Constant> Constants;
+    static List<IntermediateCodeStatement> IntermediateCode;
 
     public static void Initialize() {
         RegisterTable = new ArrayList<>();
@@ -189,11 +216,12 @@ public class Assignment1 {
 
     public static void Pass1(LinesOfCode loc) {
         for (var wordsInLine : loc.Words) {
-            var line = "";
+            var line = new IntermediateCodeStatement();
             for (int i = 0; i < wordsInLine.size(); i++) {
                 var word = wordsInLine.get(i);
                 Opcode opcode;
                 Register register;
+                Constant c;
                 switch (GetType(word)) {
                     case "Label":
                         var symbol = SymbolTable.stream().filter(x -> x.Name.equals(word)).findFirst();
@@ -205,29 +233,34 @@ public class Assignment1 {
                         if (i == 0) {
                             symbol.get().Address.Value = LocationCounter;
                         } else {
-                            line += "S\t" + symbol.get().Id + "\t";
+                            line.Operand2 = symbol.get();// "(S," + symbol.get().Id + ")\t";
                         }
 
                         break;
                     case "Constant":
-                        line += "C\t" + word + "\t";
-                        Constants.add(Integer.parseInt(word));
+                        c = new Constant(Integer.parseInt(word));
+                        line.Operand2 = c;// "(C," + word + ")\t";
+                        Constants.add(c);
                         break;
                     case "Literal":
-                        line += "L\t" + LiteralTable.size();
-                        LiteralTable.add(new Literal(word));
+                        var l = new Literal(word);
+                        line.Operand2 = l;// "(L," + LiteralTable.size() + ")";
+                        LiteralTable.add(l);
                         break;
                     case "LTORG":
                         opcode = PseudoOperationTable.stream().filter(x -> x.Opcode.equals(word)).findFirst().get();
                         PoolTable.add(NextPoolIndex);
                         for (var literal : LiteralTable.stream().filter(x -> x.Address.Value == 0)
                                 .collect(Collectors.toList())) {
-                            line = new String();
+                            line = new IntermediateCodeStatement();
                             literal.Address.Value = LocationCounter;
-                            line += opcode.StatementClass + "\t" + opcode.MneumonicInformation + "\t";
-                            line += literal.Literal;
+                            line.Address.Value = LocationCounter;
+                            line.Opcode = opcode;// "(" + opcode.StatementClass + "," + opcode.MneumonicInformation +
+                                                 // ")\t";
+                            line.Operand2 = literal;
                             IntermediateCode.add(line);
                             LocationCounter++;
+                            line=null;
                         }
                         NextPoolIndex = LiteralTable.size();
 
@@ -252,13 +285,16 @@ public class Assignment1 {
                         }
                         LocationCounter = address;
                         opcode = PseudoOperationTable.stream().filter(x -> x.Opcode.equals(word)).findFirst().get();
-                        line += opcode.StatementClass + "\t" + opcode.MneumonicInformation + "\t" + "C\t"
-                                + LocationCounter;
+                        line.Opcode = opcode;// "(" + opcode.StatementClass + "," + opcode.MneumonicInformation + ")\t"
+                                             // + "(C,"
+                        c = new Constant(address);
+                        Constants.add(c);
+                        line.Operand2 = c; // + LocationCounter + ")";
 
                         break;
                     case "EQU":
                         opcode = PseudoOperationTable.stream().filter(x -> x.Opcode.equals(word)).findFirst().get();
-                        line += opcode.StatementClass + "\t" + opcode.MneumonicInformation + "\t";
+                        line.Opcode = opcode;// "(" + opcode.StatementClass + "," + opcode.MneumonicInformation + ")\t";
                         int y = i + 1;
                         int z = i - 1;
                         var label = SymbolTable.stream().filter(x -> x.Name.equals(wordsInLine.get(y))).findFirst()
@@ -269,7 +305,8 @@ public class Assignment1 {
                         break;
                     case "DL":
                         opcode = MachineOperationTable.stream().filter(x -> x.Opcode.equals(word)).findFirst().get();
-                        line += opcode.StatementClass + "\t" + opcode.MneumonicInformation + "\t";
+                        line.Opcode = opcode;// "(" + opcode.StatementClass + "," + opcode.MneumonicInformation + ")\t";
+                        line.Address.Value=LocationCounter;
                         LocationCounter++;
                         break;
 
@@ -277,19 +314,21 @@ public class Assignment1 {
 
                         opcode = MachineOperationTable.stream().filter(x -> x.Opcode.equals(word)).findFirst().get();
                         var condition = Conditions.stream().filter(x -> x.OPCODE.equals(opcode)).findFirst();
-                        line += opcode.StatementClass + "\t" + opcode.MneumonicInformation + "\t";
+                        line.Opcode = opcode;// "(" + opcode.StatementClass + "," + opcode.MneumonicInformation + ")\t";
 
                         if (condition.isPresent()) {
                             i++;
-                            line += wordsInLine.get(i) + "\t";
+                            var cond = wordsInLine.get(i);
+                            line.Operand1 = Conditions.stream().filter(x -> x.Name.equals(cond)).findFirst().get().Id;
                         }
+                        line.Address.Value=LocationCounter;
                         LocationCounter++;
 
                         break;
 
                     case "Register":
                         register = RegisterTable.stream().filter(x -> x.Name.equals(word)).findFirst().get();
-                        line += "R\t" + register.Id + "\t";
+                        line.Operand1 = register.Id;
                         break;
                     case "END":
                         opcode = PseudoOperationTable.stream().filter(x -> x.Opcode.equals(word)).findFirst().get();
@@ -298,12 +337,15 @@ public class Assignment1 {
                         if (unassignedLiterals.size() != 0) {
                             PoolTable.add(NextPoolIndex);
                             for (var literal : unassignedLiterals) {
+                                line = new IntermediateCodeStatement();
                                 literal.Address.Value = LocationCounter;
-                                line += opcode.StatementClass + "\t" + opcode.MneumonicInformation + "\t";
-                                line += literal.Literal;
+                                line.Address.Value = LocationCounter;
+                                line.Opcode = opcode;// "(" + opcode.StatementClass + "," + opcode.MneumonicInformation
+                                                     // + ")\t";
+                                line.Operand2 = literal;
                                 IntermediateCode.add(line);
-                                line = new String();
                                 LocationCounter++;
+                                line=null;
                             }
                         }
                         break;
@@ -312,10 +354,28 @@ public class Assignment1 {
                 }
 
             }
+            if(line!=null)
+            if( line.Opcode!=null)
             IntermediateCode.add(line);
         }
     }
 
+    public static void Pass2() {
+        LocationCounter=0;
+        for (var  line : IntermediateCode) {
+            switch(line.Opcode.Opcode) {
+                case "START":
+                case "Origin":
+                LocationCounter=line.Operand2.Value;
+                break;
+                case "DL":
+
+                break;
+                case "IS":
+                break;
+            }
+        }
+    }
     public static void main(String[] args) throws IOException {
         Initialize();
         InitializeRegisterTable();
@@ -334,7 +394,7 @@ public class Assignment1 {
         System.out.println("Intermediate Code");
         Pass1(loc);
         for (var line : IntermediateCode) {
-            System.out.println(line);
+            System.out.println(String.format("%d)(%s,%s)(%d)(%c,%d)", line.Address.Value,line.Opcode!=null?line.Opcode.StatementClass:"-",line.Opcode!=null?line.Opcode.MneumonicInformation:"-",line.Operand1,line.Operand2!=null?line.Operand2.GetType():'-',line.Operand2!=null?line.Operand2.Id:0));
         }
         System.out.println("Symbol Table");
         for (var sbl : SymbolTable) {
@@ -350,5 +410,6 @@ public class Assignment1 {
         for (var poolPtr : PoolTable) {
             System.out.println(poolPtr);
         }
+        Pass2();
     }
 }
