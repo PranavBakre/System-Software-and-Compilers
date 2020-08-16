@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
 public class Assignment1 {
 
     //Parent class for Constants, Literals and Symbols
-    public static class Numeric {
+    public static class Operand {
         public int Id;
         public int Value;
         public Address Address;
@@ -23,7 +23,7 @@ public class Assignment1 {
 
     }
 
-    public static class Symbol extends Numeric {
+    public static class Symbol extends Operand {
         public String Name;
         public int Length;
 
@@ -38,7 +38,7 @@ public class Assignment1 {
         }
     }
 
-    public static class Constant extends Numeric {
+    public static class Constant extends Operand {
         public Constant(int value) {
             Id = Constants.size();
             Value = value;
@@ -46,7 +46,7 @@ public class Assignment1 {
         }
     }
 
-    public static class Literal extends Numeric {
+    public static class Literal extends Operand {
         public Literal(String literal) {
             Value = Integer.parseInt(literal.replaceAll("'", ""));
             Id = LiteralTable.size();
@@ -114,7 +114,7 @@ public class Assignment1 {
         public Address Address;
         public Opcode Opcode;
         public int Operand1;
-        public Numeric Operand2;
+        public Operand Operand2;
 
         public IntermediateCodeStatement() {
             Address = new Address();
