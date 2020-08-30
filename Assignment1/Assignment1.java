@@ -121,10 +121,11 @@ public class Assignment1 {
         }
 
         public String toString(){
+            
             return String.format("%d)\t(%s,%s)\t(%d)\t(%s)", this.Address.Value,
                     this.Opcode != null ? this.Opcode.StatementClass : "-",
                     this.Opcode != null ? this.Opcode.MneumonicInformation : "-", this.Operand1,
-                    this.Operand2 != null ? ""+this.Operand2.GetType()+","+ this.Operand2.Id : '-'
+                    this.Operand2 != null ? ""+this.Operand2.GetType()+","+ (this.Operand2.GetType()=='C'? this.Operand2.Value:this.Operand2.Id) : '-'
                     );
         }
     }
