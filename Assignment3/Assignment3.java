@@ -7,14 +7,13 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Assignment3 {
 
-    public static Assembly  AssemblyCode;
+    public static Assembly AssemblyCode;
     public static List<Macro> MacroNameTable;
-
-
-
 
     public static class Assembly {
         public List<String> lines;
@@ -27,7 +26,7 @@ public class Assignment3 {
             try (BufferedReader reader = new BufferedReader(new FileReader(fileName))) {
                 var line = reader.readLine();
                 while (line != null) {
-                    if (line!="")
+                    if (line != "")
                         lines.add(line);
                     line = reader.readLine();
                 }
@@ -93,80 +92,134 @@ public class Assignment3 {
 
     }
 
-    public static void Pass1() throws IOException{
-        var lines=AssemblyCode.lines;
-        for (int i=0 ;i< lines.size();) {
-            if (lines.get(i).equals("MACRO")){
+    public static void Pass1() throws IOException {
+        var lines = AssemblyCode.lines;
+        for (int i = 0; i < lines.size();) {
+            if (lines.get(i).equals("MACRO")) {
                 lines.remove(i);
-                var macro=new Macro();
-                var words=lines.get(i).split(" |,|\t");
-                
+                var macro = new Macro();
+                var words = lines.get(i).split(" |,|\t");
+
                 for (String word : words) {
-                    if (word.matches("&[A-Z0-9_]*")){
-                        System.out.println(word);
+                    if (word.matches("&[A-Z0-9_]*")) {
                         macro.addArgument(word);
-                    }
-                    else {
-                        macro.name=word;
+                    } else {
+                        macro.name = word;
                     }
                 }
                 lines.remove(i);
-                var line=lines.get(i);
-                while(!line.equals("MEND")){
-                    
-                    words=line.split(" |,");
+                var line = lines.get(i);
+                while (!line.equals("MEND")) {
+
+                    words = line.split(" |,");
                     for (String word : words) {
-                        if (word.equals("")){
+                        if (word.equals("")) {
                             continue;
                         }
-                        
-                        if (word.matches("&[A-Z0-9_]*")){
-                            //System.out.println(word);
-                            String rep="%"+Integer.toString(macro.findArgumentByFormalParameter(word).id);
-                            line=line.replace(word,rep);
-                            
+
+                        if (word.matches("&[A-Z0-9_]*")) {
+                            String rep = "%" + Integer.toString(macro.findArgumentByFormalParameter(word).id);
+                            line = line.replace(word, rep);
+
                         }
                     }
                     macro.definition.lines.add(line);
                     lines.remove(i);
-                    line=lines.get(i);
+                    line = lines.get(i);
                 }
                 MacroNameTable.add(macro);
                 lines.remove(i);
-            }
-            else {
+            } else {
                 i++;
             }
         }
-        var bufferedWriter=new BufferedWriter(new FileWriter("AssemblMinusMacro.txt"));
+        var bufferedWriter = new BufferedWriter(new FileWriter("AssemblyMinusMacro.txt"));
         for (String string : AssemblyCode.lines) {
-            bufferedWriter.write(string+"\n");
+            bufferedWriter.write(string + "\n");
         }
         bufferedWriter.close();
     }
-    
-    public static void Pass2() {
 
-        for (var line : AssemblyCode.lines) {
-            var words=line.split(" |,");
-            var macroIndex=0;
-            for(int i=0;i<words.length;i++){
-                var word=words[i];
-                if(MacroNameTable.stream().filter(x->x.name.equals(word)).findAny().isPresent()){
-                    macroIndex=i;
+    public static void Pass2() throws IOException {
+
+        for (int lineCounter = 0; lineCounter < AssemblyCode.lines.size(); lineCounter++) {
+            System.out.println(AssemblyCode.lines.get(lineCounter));
+        }
+        for (int lineCounter = 0; lineCounter < AssemblyCode.lines.size(); lineCounter++) {
+            var line = AssemblyCode.lines.get(lineCounter);
+            var words = line.split(" |,");
+            var macroIndex = 0;
+            Macro macro;
+            Boolean noMacro = false;
+            //String word;
+            for (int i = 0; i < words.length; i++) {
+               var word = words[i];
+                System.out.println(word);
+                if (MacroNameTable.stream().filter(x -> x.name.equals(word)).findAny().isPresent()) {
+                    macroIndex = i;
+                    System.out.println("MACRO "+i);
+                    noMacro=false;
+                } else {
+                    noMacro = true;
                 }
-                else {
-                    if (word.matches("&[A-Z0-9_]*=[A-Z0-9_]*")){
-                        var params=word.split("&|=");
-                        
+            }
+            if (!noMacro) {
+                var word=words[macroIndex];
+                macro = MacroNameTable.stream().filter(x->x.name.equals(word)).findAny().get();
+                for (int i = 0; i < words.length; i++) {
+                    if (i != macroIndex) {
+                        word = words[i];
+                        if (word.matches("&[A-Z0-9_]*=[A-Z0-9_]*")) {
+                            var params = word.split("=");
+                            macro.findArgumentByFormalParameter(params[0]).actualParameter = params[1];
+                        } else {
+                            if (i < macroIndex) {
+                                macro.argumentListArray.get(i).actualParameter = word;
+                            } else {
+                                macro.argumentListArray.get(i - 1).actualParameter = word;
+                            }
+
+                        }
+
                     }
+                }
+
+                for (Macro _macro : MacroNameTable) {
+                    System.out.println(_macro.name);
+                    for (var string : _macro.argumentListArray) {
+                        System.out.println(string.formalParameter + " " + string.actualParameter);
+                    }
+
+                }
+                AssemblyCode.lines.remove(lineCounter);
+                for (String macroLines : macro.definition.lines) {
+                    System.out.println("------");
+                    Pattern pattern = Pattern.compile("%[\\d]+");
+                    Matcher matcher = pattern.matcher(macroLines);
+                    while (matcher.find()) {
+                        String id = matcher.group();
+                        
+
+                        var ac = macro.findArgumentById(id.replace("%", "")).actualParameter;
+                        System.out.println("=" + ac + "=");
+                        macroLines.replace(id, ac);
+                    }
+                    
+                    AssemblyCode.lines.add(lineCounter, macroLines);
                 }
             }
         }
+        var bufferedWriter = new BufferedWriter(new FileWriter("Output.txt"));
+        for (String string : AssemblyCode.lines) {
+            bufferedWriter.write(string + "\n");
+        }
+        bufferedWriter.close();
+
     }
+
     public static void main(String[] args) throws IOException {
-        AssemblyCode=new Assembly();
-        MacroNameTable=new ArrayList<>();
+        AssemblyCode = new Assembly();
+        MacroNameTable = new ArrayList<>();
         AssemblyCode.ReadAssembly(args[0]);
         Pass1();
         Pass2();
