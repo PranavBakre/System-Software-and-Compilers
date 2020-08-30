@@ -1,0 +1,22 @@
+Macro Name
+INCR1
+
+Argument List Array
+0 &FIRST DATA1
+1 &SECOND DATA12
+
+Definition
+A 1,%0
+L 2,%1
+
+Macro Name
+INCR2
+
+Argument List Array
+0 &ARG1 DATA3
+1 &ARG2 DATA4
+
+Definition
+L 3,%0
+ST 4,%1
+
