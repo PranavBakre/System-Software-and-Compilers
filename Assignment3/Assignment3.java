@@ -40,19 +40,7 @@ public class Assignment3 {
         Definition definition;
         List<Argument> argumentListArray;
 
-        public static class Argument {
-            int id;
-            String formalParameter;
-            String actualParameter;
-        }
 
-        public static class Definition {
-            List<String> lines;
-
-            public Definition() {
-                lines = new ArrayList<>();
-            }
-        }
 
         public Macro() {
             definition = new Definition();
@@ -92,6 +80,19 @@ public class Assignment3 {
 
     }
 
+    public static class Argument {
+        int id;
+        String formalParameter;
+        String actualParameter;
+    }
+
+    public static class Definition {
+        List<String> lines;
+
+        public Definition() {
+            lines = new ArrayList<>();
+        }
+    }
     public static List<String> reverse(List<String> l) {
         var reverse = new ArrayList<String>();
         for (int i = l.size() - 1; i >= 0; i--) {
