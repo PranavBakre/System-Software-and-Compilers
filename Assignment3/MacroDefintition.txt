@@ -2,8 +2,8 @@ Macro Name
 INCR2
 
 Argument List Array
-0 &ARG1 DATA3
-1 &ARG2 DATA4
+0 &ARG1 null
+1 &ARG2 null
 
 Definition
 L 3,%0
@@ -13,10 +13,11 @@ Macro Name
 INCR1
 
 Argument List Array
-0 &FIRST DATA1
-1 &SECOND DATA12
+0 &FIRST null
+1 &SECOND null
 
 Definition
 A 1,%0
 L 2,%1
+INCR2 DATA3,DATA4
 

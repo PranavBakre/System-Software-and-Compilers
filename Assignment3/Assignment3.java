@@ -16,6 +16,7 @@ public class Assignment3 {
     public static Assembly AssemblyCode;
     public static List<Macro> MacroNameTable;
     public static Stack<Macro> OpenMacro;
+
     public static class Assembly {
         public List<String> lines;
 
@@ -40,8 +41,6 @@ public class Assignment3 {
         String name;
         Definition definition;
         List<Argument> argumentListArray;
-
-
 
         public Macro() {
             definition = new Definition();
@@ -94,6 +93,7 @@ public class Assignment3 {
             lines = new ArrayList<>();
         }
     }
+
     public static List<String> reverse(List<String> l) {
         var reverse = new ArrayList<String>();
         for (int i = l.size() - 1; i >= 0; i--) {
@@ -105,100 +105,79 @@ public class Assignment3 {
 
     public static void Pass1() throws IOException {
         var lines = AssemblyCode.lines;
-        boolean inMacro=false;
+        boolean inMacro = false;
         Macro macro;
         String[] words;
         for (int i = 0; i < lines.size();) {
-            switch(lines.get(i)) {
+            switch (lines.get(i)) {
                 case "MACRO":
-                lines.remove(i);
-                macro = new Macro();
-                OpenMacro.push(macro);
-                words = lines.get(i).split(" |,|\t");
-                inMacro=true;
-                for (String word : words) {
-                    if (word.matches("&[A-Z0-9_]*")) {
-                        macro.addArgument(word);
-                    } else {
-                        macro.name = word;
-                    }
-                }
-                lines.remove(i);
-            
-                break;
-                case "MEND":
-                macro=OpenMacro.pop();
-                MacroNameTable.add(macro);
-                if (OpenMacro.empty()){
-                    inMacro=false;
-                }
-                lines.remove(i);
-                
-                break;
-                default:
-                
-                if (inMacro) {
-                    var line=lines.get(i);
-                    words = line.split(" |,");
-                    macro=OpenMacro.peek();
-                    for (String word : words) {
-                        if (word.equals("")) {
-                            continue;
-                        }
-
-                        if (word.matches("&[A-Z0-9_]*")) {
-                            String rep = "%" + Integer.toString(macro.findArgumentByFormalParameter(word).id);
-                            line = line.replace(word, rep);
-
-                        }
-                    }
-                    macro.definition.lines.add(line);
                     lines.remove(i);
-                    
-                } else {
-                    i++;
-                }
+                    macro = new Macro();
+                    OpenMacro.push(macro);
+                    words = lines.get(i).split(" |,|\t");
+                    inMacro = true;
+                    for (String word : words) {
+                        if (word.matches("&[A-Z0-9_]*")) {
+                            macro.addArgument(word);
+                        } else {
+                            macro.name = word;
+                        }
+                    }
+                    lines.remove(i);
+
+                    break;
+                case "MEND":
+                    macro = OpenMacro.pop();
+                    MacroNameTable.add(macro);
+                    if (OpenMacro.empty()) {
+                        inMacro = false;
+                    }
+                    lines.remove(i);
+
+                    break;
+                default:
+
+                    if (inMacro) {
+                        var line = lines.get(i);
+                        words = line.split(" |,");
+                        macro = OpenMacro.peek();
+                        for (String word : words) {
+                            if (word.equals("")) {
+                                continue;
+                            }
+
+                            if (word.matches("&[A-Z0-9_]*")) {
+                                String rep = "%" + Integer.toString(macro.findArgumentByFormalParameter(word).id);
+                                line = line.replace(word, rep);
+
+                            }
+                        }
+                        macro.definition.lines.add(line);
+                        lines.remove(i);
+
+                    } else {
+                        i++;
+                    }
             }
-            // if (lines.get(i).equals("MACRO")) {
-            //     lines.remove(i);
-            //     var macro = new Macro();
-            //     var words = lines.get(i).split(" |,|\t");
-
-            //     for (String word : words) {
-            //         if (word.matches("&[A-Z0-9_]*")) {
-            //             macro.addArgument(word);
-            //         } else {
-            //             macro.name = word;
-            //         }
-            //     }
-            //     lines.remove(i);
-            //     var line = lines.get(i);
-            //     while (!line.equals("MEND")) {
-            //         words = line.split(" |,");
-            //         for (String word : words) {
-            //             if (word.equals("")) {
-            //                 continue;
-            //             }
-
-            //             if (word.matches("&[A-Z0-9_]*")) {
-            //                 String rep = "%" + Integer.toString(macro.findArgumentByFormalParameter(word).id);
-            //                 line = line.replace(word, rep);
-
-            //             }
-            //         }
-            //         macro.definition.lines.add(line);
-            //         lines.remove(i);
-            //         line = lines.get(i);
-            //     }
-            //     MacroNameTable.add(macro);
-            //     lines.remove(i);
-            // } else {
-            //     i++;
-            // }
+      
         }
         var bufferedWriter = new BufferedWriter(new FileWriter("Pass1Output.txt"));
         for (String string : AssemblyCode.lines) {
             bufferedWriter.write(string + "\n");
+        }
+        bufferedWriter.close();
+        bufferedWriter = new BufferedWriter(new FileWriter("MacroDefintition.txt"));
+        for (Macro _macro : MacroNameTable) {
+            bufferedWriter.write("Macro Name\n" + _macro.name + "\n\n");
+            bufferedWriter.write("Argument List Array\n");
+            for (var arg : _macro.argumentListArray) {
+                bufferedWriter.write(arg.id + " " + arg.formalParameter + " " + arg.actualParameter + "\n");
+            }
+            bufferedWriter.write("\nDefinition\n");
+            for (String line : _macro.definition.lines) {
+                bufferedWriter.write(line + "\n");
+            }
+            bufferedWriter.write("\n");
         }
         bufferedWriter.close();
     }
@@ -265,24 +244,11 @@ public class Assignment3 {
     public static void main(String[] args) throws IOException {
         AssemblyCode = new Assembly();
         MacroNameTable = new ArrayList<>();
-        OpenMacro=new Stack<>();
+        OpenMacro = new Stack<>();
         AssemblyCode.ReadAssembly(args[0]);
         Pass1();
         Pass2();
-        BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter("MacroDefintition.txt"));
-        for (Macro _macro : MacroNameTable) {
-            bufferedWriter.write("Macro Name\n" + _macro.name + "\n\n");
-            bufferedWriter.write("Argument List Array\n");
-            for (var arg : _macro.argumentListArray) {
-                bufferedWriter.write(arg.id + " " + arg.formalParameter + " " + arg.actualParameter + "\n");
-            }
-            bufferedWriter.write("\nDefinition\n");
-            for (String line : _macro.definition.lines) {
-                bufferedWriter.write(line + "\n");
-            }
-            bufferedWriter.write("\n");
-        }
-        bufferedWriter.close();
+
     }
 
 }
