@@ -1,5 +1,5 @@
-
 package Assignment1;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileReader;
@@ -9,9 +9,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+
 public class Assignment1 {
 
-    //Parent class for Constants, Literals and Symbols
+    // Parent class for Constants, Literals and Symbols
     public static class Operand {
         public int Id;
         public int Value;
@@ -33,7 +34,8 @@ public class Assignment1 {
             Length = length;
             Address = new Address();
         }
-        public String toString () {
+
+        public String toString() {
             return this.Name + "\t" + this.Address.Value;
         }
     }
@@ -52,12 +54,13 @@ public class Assignment1 {
             Id = LiteralTable.size();
             Address = new Address();
         }
-        public String toString () {
+
+        public String toString() {
             return this.Value + "\t" + this.Address.Value;
         }
     }
 
-    //Opcode class for Operation Table
+    // Opcode class for Operation Table
     public static class Opcode {
         public String Opcode;
         public String StatementClass;
@@ -70,7 +73,7 @@ public class Assignment1 {
         }
     }
 
-    //Wrapper class for integer
+    // Wrapper class for integer
     public static class Address {
         public int Value;
 
@@ -79,7 +82,7 @@ public class Assignment1 {
         }
     }
 
-    //Register class for Register table
+    // Register class for Register table
     public static class Register {
         public int Id;
         public String Name;
@@ -90,13 +93,14 @@ public class Assignment1 {
         }
     }
 
-    //Class for storing lines and words in assembly code
+    // Class for storing lines and words in assembly code
     public static class LinesOfCode {
         public List<String> Lines;
         public List<ArrayList<String>> Words;
     }
 
-    //Condition class used specially for BC instruction. However other instructions can be added as well
+    // Condition class used specially for BC instruction. However other instructions
+    // can be added as well
     public static class Condition {
         public Opcode OPCODE;
         public String Name;
@@ -109,7 +113,8 @@ public class Assignment1 {
         }
     }
 
-    //Class for intermediate code. Each line is saved in a Intermediae Code statement
+    // Class for intermediate code. Each line is saved in a Intermediae Code
+    // statement
     public static class IntermediateCodeStatement {
         public Address Address;
         public Opcode Opcode;
@@ -120,18 +125,21 @@ public class Assignment1 {
             Address = new Address();
         }
 
-        public String toString(){
-            
+        public String toString() {
+
             return String.format("%d)\t(%s,%s)\t(%d)\t(%s)", this.Address.Value,
                     this.Opcode != null ? this.Opcode.StatementClass : "-",
                     this.Opcode != null ? this.Opcode.MneumonicInformation : "-", this.Operand1,
-                    this.Operand2 != null ? ""+this.Operand2.GetType()+","+ (this.Operand2.GetType()=='C'? this.Operand2.Value:this.Operand2.Id) : '-'
-                    );
+                    this.Operand2 != null
+                            ? "" + this.Operand2.GetType() + ","
+                                    + (this.Operand2.GetType() == 'C' ? this.Operand2.Value : this.Operand2.Id)
+                            : '-');
         }
     }
 
     static int LocationCounter;
-    //Machine Operation Table stores IS and DL statements while Pseudo Operation Table stores Assembler Directives
+    // Machine Operation Table stores IS and DL statements while Pseudo Operation
+    // Table stores Assembler Directives
     static List<Opcode> MachineOperationTable, PseudoOperationTable;
     static List<Symbol> SymbolTable;
     static List<Literal> LiteralTable;
@@ -143,7 +151,7 @@ public class Assignment1 {
     static List<IntermediateCodeStatement> IntermediateCode;
     static List<String> MachineCode;
 
-    //Function for initializing all the required data structures
+    // Function for initializing all the required data structures
     public static void Initialize() {
         RegisterTable = new ArrayList<>();
         MachineOperationTable = new ArrayList<>();
@@ -158,7 +166,7 @@ public class Assignment1 {
         MachineCode = new ArrayList<>();
     }
 
-    //Insert Registers into Register table
+    // Insert Registers into Register table
     public static void InitializeRegisterTable() {
         RegisterTable.add(new Register(1, "AREG"));
         RegisterTable.add(new Register(2, "BREG"));
@@ -166,7 +174,7 @@ public class Assignment1 {
         RegisterTable.add(new Register(4, "DREG"));
     }
 
-    //Insert instructions into Operation Table
+    // Insert instructions into Operation Table
     public static void InitializeOT() {
         MachineOperationTable.add(new Opcode("STOP", "IS", "00"));
         MachineOperationTable.add(new Opcode("ADD", "IS", "01"));
@@ -196,7 +204,7 @@ public class Assignment1 {
         Conditions.add(new Condition(opcode, "ANY", 6));
     }
 
-    //Read Assembly Code into LinesOfCode object
+    // Read Assembly Code into LinesOfCode object
     public static LinesOfCode ReadAssembly(BufferedReader reader) throws IOException {
         var list = new ArrayList<String>();
         var allWords = new ArrayList<ArrayList<String>>();
@@ -217,8 +225,8 @@ public class Assignment1 {
 
     }
 
-    //Returns the type of the token. 
-    //Returns class if instructions are present in MOT,
+    // Returns the type of the token.
+    // Returns class if instructions are present in MOT,
     // opcode if present in POT, Label,Register,Literal or Constant
     public static String GetType(String value) {
         var mOpcode = MachineOperationTable.stream().filter(x -> x.Opcode.equals(value)).findFirst();
@@ -244,7 +252,7 @@ public class Assignment1 {
         return "Label";
     }
 
-    //Pass 1 of the assembler
+    // Pass 1 of the assembler
     public static void Pass1(LinesOfCode loc) {
         for (var wordsInLine : loc.Words) {
             var line = new IntermediateCodeStatement();
@@ -254,35 +262,109 @@ public class Assignment1 {
                 Register register;
                 Constant c;
                 switch (GetType(word)) {
-                    case "Label":
-                        var symbol = SymbolTable.stream().filter(x -> x.Name.equals(word)).findFirst();
-                        if (!symbol.isPresent()) {
-                            var newSymbol = new Symbol(word, 1);
-                            SymbolTable.add(newSymbol);
-                        }
-                        symbol = SymbolTable.stream().filter(x -> x.Name.equals(word)).findFirst();
-                        if (i == 0) {
-                            symbol.get().Address.Value = LocationCounter;
-                        } else {
-                            line.Operand2 = symbol.get();
-                        }
+                case "Label":
+                    var symbol = SymbolTable.stream().filter(x -> x.Name.equals(word)).findFirst();
+                    if (!symbol.isPresent()) {
+                        var newSymbol = new Symbol(word, 1);
+                        SymbolTable.add(newSymbol);
+                    }
+                    symbol = SymbolTable.stream().filter(x -> x.Name.equals(word)).findFirst();
+                    if (i == 0) {
+                        symbol.get().Address.Value = LocationCounter;
+                    } else {
+                        line.Operand2 = symbol.get();
+                    }
 
-                        break;
-                    case "Constant":
-                        c = new Constant(Integer.parseInt(word));
-                        line.Operand2 = c;
-                        Constants.add(c);
-                        break;
-                    case "Literal":
-                        var l = new Literal(word);
-                        line.Operand2 = l;
-                        LiteralTable.add(l);
-                        break;
-                    case "LTORG":
-                        opcode = PseudoOperationTable.stream().filter(x -> x.Opcode.equals(word)).findFirst().get();
+                    break;
+                case "Constant":
+                    c = new Constant(Integer.parseInt(word));
+                    line.Operand2 = c;
+                    Constants.add(c);
+                    break;
+                case "Literal":
+                    var l = new Literal(word);
+                    line.Operand2 = l;
+                    LiteralTable.add(l);
+                    break;
+                case "LTORG":
+                    opcode = PseudoOperationTable.stream().filter(x -> x.Opcode.equals(word)).findFirst().get();
+                    PoolTable.add(NextPoolIndex);
+                    for (var literal : LiteralTable.stream().filter(x -> x.Address.Value == 0)
+                            .collect(Collectors.toList())) {
+                        line = new IntermediateCodeStatement();
+                        literal.Address.Value = LocationCounter;
+                        line.Address.Value = LocationCounter;
+                        line.Opcode = opcode;
+                        line.Operand2 = literal;
+                        IntermediateCode.add(line);
+                        LocationCounter++;
+                        line = null;
+                    }
+                    NextPoolIndex = LiteralTable.size();
+
+                    break;
+                case "START":
+                case "ORIGIN":
+                    var address = 0;
+                    i++;
+                    while (i < wordsInLine.size()) {
+                        var nextWord = wordsInLine.get(i);
+                        switch (GetType(nextWord)) {
+                        case "Label":
+                            address += SymbolTable.stream().filter(x -> x.Name.equals(nextWord)).findFirst()
+                                    .get().Address.Value;
+                            break;
+                        case "Constant":
+                            address += Integer.parseInt(nextWord);
+                            break;
+                        }
+                        i++;
+                    }
+                    LocationCounter = address;
+                    opcode = PseudoOperationTable.stream().filter(x -> x.Opcode.equals(word)).findFirst().get();
+                    line.Opcode = opcode;
+                    c = new Constant(address);
+                    Constants.add(c);
+                    line.Operand2 = c;
+                    break;
+                case "EQU":
+                    opcode = PseudoOperationTable.stream().filter(x -> x.Opcode.equals(word)).findFirst().get();
+                    line.Opcode = opcode;
+                    int y = i + 1;
+                    int z = i - 1;
+                    var label = SymbolTable.stream().filter(x -> x.Name.equals(wordsInLine.get(y))).findFirst().get();
+                    SymbolTable.stream().filter(x -> x.Name.equals(wordsInLine.get(z))).findFirst()
+                            .get().Address = label.Address;
+                    break;
+                case "DL":
+                    opcode = MachineOperationTable.stream().filter(x -> x.Opcode.equals(word)).findFirst().get();
+                    line.Opcode = opcode;
+                    line.Address.Value = LocationCounter;
+                    LocationCounter++;
+                    break;
+                case "IS":
+                    opcode = MachineOperationTable.stream().filter(x -> x.Opcode.equals(word)).findFirst().get();
+                    var condition = Conditions.stream().filter(x -> x.OPCODE.equals(opcode)).findFirst();
+                    line.Opcode = opcode;
+                    if (condition.isPresent()) {
+                        i++;
+                        var cond = wordsInLine.get(i);
+                        line.Operand1 = Conditions.stream().filter(x -> x.Name.equals(cond)).findFirst().get().Id;
+                    }
+                    line.Address.Value = LocationCounter;
+                    LocationCounter++;
+                    break;
+                case "Register":
+                    register = RegisterTable.stream().filter(x -> x.Name.equals(word)).findFirst().get();
+                    line.Operand1 = register.Id;
+                    break;
+                case "END":
+                    opcode = PseudoOperationTable.stream().filter(x -> x.Opcode.equals(word)).findFirst().get();
+                    var unassignedLiterals = LiteralTable.stream().filter(x -> x.Address.Value == 0)
+                            .collect(Collectors.toList());
+                    if (unassignedLiterals.size() != 0) {
                         PoolTable.add(NextPoolIndex);
-                        for (var literal : LiteralTable.stream().filter(x -> x.Address.Value == 0)
-                                .collect(Collectors.toList())) {
+                        for (var literal : unassignedLiterals) {
                             line = new IntermediateCodeStatement();
                             literal.Address.Value = LocationCounter;
                             line.Address.Value = LocationCounter;
@@ -292,86 +374,10 @@ public class Assignment1 {
                             LocationCounter++;
                             line = null;
                         }
-                        NextPoolIndex = LiteralTable.size();
-
-                        break;
-                    case "START":
-                    case "ORIGIN":
-                        var address = 0;
-                        i++;
-                        while (i < wordsInLine.size()) {
-                            var nextWord = wordsInLine.get(i);
-                            switch (GetType(nextWord)) {
-                                case "Label":
-                                    address += SymbolTable.stream().filter(x -> x.Name.equals(nextWord)).findFirst()
-                                            .get().Address.Value;
-                                    break;
-                                case "Constant":
-                                    address += Integer.parseInt(nextWord);
-                                    break;
-                            }
-                            i++;
-                        }
-                        LocationCounter = address;
-                        opcode = PseudoOperationTable.stream().filter(x -> x.Opcode.equals(word)).findFirst().get();
-                        line.Opcode = opcode;
-                        c = new Constant(address);
-                        Constants.add(c);
-                        line.Operand2 = c;
-                        break;
-                    case "EQU":
-                        opcode = PseudoOperationTable.stream().filter(x -> x.Opcode.equals(word)).findFirst().get();
-                        line.Opcode = opcode;
-                        int y = i + 1;
-                        int z = i - 1;
-                        var label = SymbolTable.stream().filter(x -> x.Name.equals(wordsInLine.get(y))).findFirst()
-                                .get();
-                        SymbolTable.stream().filter(x -> x.Name.equals(wordsInLine.get(z))).findFirst()
-                                .get().Address = label.Address;
-                        LocationCounter++;
-                        break;
-                    case "DL":
-                        opcode = MachineOperationTable.stream().filter(x -> x.Opcode.equals(word)).findFirst().get();
-                        line.Opcode = opcode;
-                        line.Address.Value = LocationCounter;
-                        LocationCounter++;
-                        break;
-                    case "IS":
-                        opcode = MachineOperationTable.stream().filter(x -> x.Opcode.equals(word)).findFirst().get();
-                        var condition = Conditions.stream().filter(x -> x.OPCODE.equals(opcode)).findFirst();
-                        line.Opcode = opcode;
-                        if (condition.isPresent()) {
-                            i++;
-                            var cond = wordsInLine.get(i);
-                            line.Operand1 = Conditions.stream().filter(x -> x.Name.equals(cond)).findFirst().get().Id;
-                        }
-                        line.Address.Value = LocationCounter;
-                        LocationCounter++;
-                        break;
-                    case "Register":
-                        register = RegisterTable.stream().filter(x -> x.Name.equals(word)).findFirst().get();
-                        line.Operand1 = register.Id;
-                        break;
-                    case "END":
-                        opcode = PseudoOperationTable.stream().filter(x -> x.Opcode.equals(word)).findFirst().get();
-                        var unassignedLiterals = LiteralTable.stream().filter(x -> x.Address.Value == 0)
-                                .collect(Collectors.toList());
-                        if (unassignedLiterals.size() != 0) {
-                            PoolTable.add(NextPoolIndex);
-                            for (var literal : unassignedLiterals) {
-                                line = new IntermediateCodeStatement();
-                                literal.Address.Value = LocationCounter;
-                                line.Address.Value = LocationCounter;
-                                line.Opcode = opcode;
-                                line.Operand2 = literal;
-                                IntermediateCode.add(line);
-                                LocationCounter++;
-                                line = null;
-                            }
-                        }
-                        break;
-                    default:
-                        System.out.print(word + "\t");
+                    }
+                    break;
+                default:
+                    System.out.print(word + "\t");
                 }
 
             }
@@ -381,49 +387,48 @@ public class Assignment1 {
         }
     }
 
-    //Pass 2 of the assembler
+    // Pass 2 of the assembler
     public static void Pass2() {
         LocationCounter = 0;
         String MCLine;
         for (var line : IntermediateCode) {
-            MCLine="";
+            MCLine = "";
             switch (GetType(line.Opcode.Opcode)) {
-                case "START":
-                case "ORIGIN":
-                    LocationCounter = line.Operand2.Value;
-                    break;
-                case "DL":
-                    MCLine += line.Address.Value + ")";
-                    break;
-                case "IS":
-                    MCLine += line.Address.Value + ")\t";
-                    if (line.Opcode != null) {
-                        MCLine += line.Opcode.MneumonicInformation + "\t";
-                        if (line.Opcode.Opcode.equals("STOP")) {
-                            line.Operand2 = new Literal("'0'");
-                        }
+            case "START":
+            case "ORIGIN":
+                LocationCounter = line.Operand2.Value;
+                break;
+            case "DL":
+                MCLine += line.Address.Value + ")";
+                break;
+            case "IS":
+                MCLine += line.Address.Value + ")\t";
+                if (line.Opcode != null) {
+                    MCLine += line.Opcode.MneumonicInformation + "\t";
+                    if (line.Opcode.Opcode.equals("STOP")) {
+                        line.Operand2 = new Literal("'0'");
                     }
-                    MCLine += line.Operand1 + "\t";
-                    if (line.Operand2 != null)
-                        MCLine += line.Operand2.Address.Value;
+                }
+                MCLine += line.Operand1 + "\t";
+                if (line.Operand2 != null)
+                    MCLine += line.Operand2.Address.Value;
 
-                    break;
-                case "LTORG":
-                case "END":
-                    MCLine += line.Address.Value + ")\t";
-                    MCLine += 00 + "\t";
-                    MCLine += line.Operand1 + "\t";
-                    MCLine += line.Operand2.Value;
-                    break;
+                break;
+            case "LTORG":
+            case "END":
+                MCLine += line.Address.Value + ")\t";
+                MCLine += 00 + "\t";
+                MCLine += line.Operand1 + "\t";
+                MCLine += line.Operand2.Value;
+                break;
             }
-            if (MCLine!="")
-            MachineCode.add(MCLine);
+            if (MCLine != "")
+                MachineCode.add(MCLine);
         }
     }
 
-
-    //Main calling function
-    public static void main(String[] args) throws IOException {        
+    // Main calling function
+    public static void main(String[] args) throws IOException {
         Initialize();
         InitializeRegisterTable();
         InitializeOT();
@@ -439,11 +444,11 @@ public class Assignment1 {
         }
         System.out.println("Intermediate Code");
         Pass1(loc);
-        var fileWriter=new FileWriter("IntermediateCode.txt");
-        var bufferedWriter=new BufferedWriter(fileWriter);
+        var fileWriter = new FileWriter("IntermediateCode.txt");
+        var bufferedWriter = new BufferedWriter(fileWriter);
         for (var line : IntermediateCode) {
             System.out.println(line.toString());
-            bufferedWriter.write(line.toString()+"\n");
+            bufferedWriter.write(line.toString() + "\n");
         }
         bufferedWriter.close();
         fileWriter.close();
@@ -460,13 +465,13 @@ public class Assignment1 {
             System.out.println(poolPtr);
         }
         Pass2();
-        fileWriter=new FileWriter("MachineCode.txt");
-        bufferedWriter=new BufferedWriter(fileWriter);
-        
+        fileWriter = new FileWriter("MachineCode.txt");
+        bufferedWriter = new BufferedWriter(fileWriter);
+
         System.out.println("Machine Code");
         for (var line : MachineCode) {
             System.out.println(line);
-            bufferedWriter.write(line+"\n");
+            bufferedWriter.write(line + "\n");
         }
         bufferedWriter.close();
         fileWriter.close();
